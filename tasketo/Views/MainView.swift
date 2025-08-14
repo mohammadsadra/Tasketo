@@ -10,7 +10,6 @@ struct MainView: View {
     
     @State private var selectedTab = 0
     @State private var showingAddTask = false
-    @State private var showingSettings = false
     @State private var searchText = ""
     @State private var selectedFilter: TaskFilter = .all
     @State private var selectedSort: TaskSort = .dueDate
@@ -195,13 +194,6 @@ struct MainView: View {
                 .navigationTitle(localizationManager.localizedString(.tasks))
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button(action: { showingSettings = true }) {
-                            Image(systemName: "gearshape")
-                                .foregroundColor(themeManager.primaryColorValue)
-                        }
-                    }
-                    
                     ToolbarItem(placement: .navigationBarTrailing) {
                         HStack {
                             // View Mode Toggle
@@ -273,12 +265,19 @@ struct MainView: View {
                 Text("Statistics")
             }
             .tag(2)
+            
+            // Settings Tab
+            NavigationView {
+                SettingsView()
+            }
+            .tabItem {
+                Image(systemName: "gearshape")
+                Text(localizationManager.localizedString(.settings))
+            }
+            .tag(3)
         }
         .sheet(isPresented: $showingAddTask) {
             AddTaskView()
-        }
-        .sheet(isPresented: $showingSettings) {
-            SettingsView()
         }
         .environment(\.layoutDirection, localizationManager.currentLanguage.isRTL ? .rightToLeft : .leftToRight)
         .preferredColorScheme(themeManager.colorScheme)
