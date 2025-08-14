@@ -188,7 +188,7 @@ struct MainView: View {
                             }
                             .listStyle(PlainListStyle())
                         } else {
-                            KanbanView()
+                            KanbanView(searchText: searchText)
                         }
                     }
                 }

@@ -7,8 +7,8 @@ struct KanbanView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @Query private var tasks: [Task]
     
+    let searchText: String
     @State private var draggedTask: Task?
-    @State private var searchText = ""
     
     var filteredTasks: [Task] {
         if searchText.isEmpty {
@@ -24,16 +24,6 @@ struct KanbanView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Search Bar
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                TextField(localizationManager.localizedString(.search), text: $searchText)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            
             // Kanban Board
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
@@ -296,7 +286,7 @@ struct ColumnDropDelegate: DropDelegate {
 
 #Preview {
     NavigationView {
-        KanbanView()
+        KanbanView(searchText: "")
             .environmentObject(LocalizationManager.shared)
             .environmentObject(ThemeManager.shared)
             .modelContainer(for: Task.self, inMemory: true)
