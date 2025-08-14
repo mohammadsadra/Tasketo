@@ -10,9 +10,14 @@ import SwiftData
 
 @main
 struct tasketoApp: App {
+    @StateObject private var localizationManager = LocalizationManager.shared
+    @StateObject private var themeManager = ThemeManager.shared
+    
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Task.self,
+            Subtask.self,
+            AppSettings.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -25,7 +30,11 @@ struct tasketoApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainView()
+                .environmentObject(localizationManager)
+                .environmentObject(themeManager)
+                .environment(\.layoutDirection, localizationManager.currentLanguage.isRTL ? .rightToLeft : .leftToRight)
+                .preferredColorScheme(themeManager.colorScheme)
         }
         .modelContainer(sharedModelContainer)
     }
