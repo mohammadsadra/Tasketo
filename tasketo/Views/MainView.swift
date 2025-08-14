@@ -14,7 +14,7 @@ struct MainView: View {
     @State private var searchText = ""
     @State private var selectedFilter: TaskFilter = .all
     @State private var selectedSort: TaskSort = .dueDate
-    @State private var viewMode: TaskViewMode = .list
+    @State private var viewMode: TaskViewMode = .kanban
     
     var filteredTasks: [Task] {
         var filtered = tasks
