@@ -40,17 +40,17 @@ struct MainView: View {
         case .overdue:
             filtered = filtered.filter { task in
                 guard let dueDate = task.dueDate else { return false }
-                return dueDate < Date() && task.status != .completed
+                return CalendarHelper.shared.isOverdue(dueDate, calendarType: currentCalendarType) && task.status != .completed
             }
         case .today:
             filtered = filtered.filter { task in
                 guard let dueDate = task.dueDate else { return false }
-                return Calendar.current.isDateInToday(dueDate)
+                return CalendarHelper.shared.isToday(dueDate, calendarType: currentCalendarType)
             }
         case .upcoming:
             filtered = filtered.filter { task in
                 guard let dueDate = task.dueDate else { return false }
-                return dueDate > Date() && task.status != .completed
+                return !CalendarHelper.shared.isOverdue(dueDate, calendarType: currentCalendarType) && task.status != .completed
             }
         }
         
@@ -105,7 +105,7 @@ struct MainView: View {
                                     Image(systemName: "line.3.horizontal.decrease.circle")
                                     Text(filterText(for: selectedFilter))
                                 }
-                                .foregroundColor(themeManager.primaryColorValue)
+                                .foregroundColor(themeManager.appColorValue)
                             }
                             
                             Spacer()
@@ -123,7 +123,7 @@ struct MainView: View {
                                         Image(systemName: viewMode.icon)
                                         Text(viewModeText(for: viewMode))
                                     }
-                                    .foregroundColor(themeManager.primaryColorValue)
+                                    .foregroundColor(themeManager.appColorValue)
                                 }
                             }
                             
@@ -140,7 +140,7 @@ struct MainView: View {
                                         Image(systemName: "arrow.up.arrow.down")
                                         Text(sortText(for: selectedSort))
                                     }
-                                    .foregroundColor(themeManager.primaryColorValue)
+                                    .foregroundColor(themeManager.appColorValue)
                                 }
                             }
                         }
@@ -168,7 +168,7 @@ struct MainView: View {
                                     .font(.headline)
                                     .foregroundColor(.white)
                                     .padding()
-                                    .background(themeManager.primaryColorValue)
+                                    .background(themeManager.appColorValue)
                                     .cornerRadius(12)
                             }
                         }
@@ -201,12 +201,12 @@ struct MainView: View {
                                 viewMode = viewMode == .list ? .kanban : .list
                             }) {
                                 Image(systemName: viewMode == .list ? "rectangle.grid.2x2" : "list.bullet")
-                                    .foregroundColor(themeManager.primaryColorValue)
+                                    .foregroundColor(themeManager.appColorValue)
                             }
                             
                             Button(action: { showingAddTask = true }) {
                                 Image(systemName: "plus")
-                                    .foregroundColor(themeManager.primaryColorValue)
+                                    .foregroundColor(themeManager.appColorValue)
                             }
                         }
                     }
@@ -276,6 +276,7 @@ struct MainView: View {
             }
             .tag(3)
         }
+        .accentColor(themeManager.appColorValue)
         .sheet(isPresented: $showingAddTask) {
             AddTaskView()
         }
@@ -331,9 +332,12 @@ struct MainView: View {
         if let settings = appSettings.first {
             localizationManager.setLanguage(settings.language)
             themeManager.setTheme(settings.theme)
-            themeManager.setPrimaryColor(settings.primaryColor)
-            themeManager.setAccentColor(settings.accentColor)
+            themeManager.setAppColor(settings.primaryColor)
         }
+    }
+    
+    private var currentCalendarType: CalendarType {
+        return appSettings.first?.calendarType ?? .gregorian
     }
 }
 

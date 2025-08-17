@@ -36,8 +36,9 @@ public final class Task {
         self.taskDescription = taskDescription
         self.priority = priority
         self.status = status
-        self.dueDate = dueDate
-        self.createdDate = Date()
+        // Store due date in UTC
+        self.dueDate = dueDate != nil ? CalendarHelper.shared.toUTC(dueDate!) : nil
+        self.createdDate = CalendarHelper.shared.toUTC(Date())
         self.calendarType = calendarType
         self.tags = tags
         self.isRecurring = isRecurring

@@ -139,6 +139,8 @@ struct KanbanTaskCard: View {
     let task: Task
     @EnvironmentObject var localizationManager: LocalizationManager
     @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.modelContext) private var modelContext
+    @Query private var appSettings: [AppSettings]
     @State private var showingTaskDetail = false
     
     var body: some View {
@@ -174,8 +176,8 @@ struct KanbanTaskCard: View {
                                 .font(.caption2)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(themeManager.accentColorValue.opacity(0.2))
-                                .foregroundColor(themeManager.accentColorValue)
+                                                            .background(themeManager.appColorValue.opacity(0.2))
+                            .foregroundColor(themeManager.appColorValue)
                                 .cornerRadius(6)
                         }
                     }
@@ -187,7 +189,7 @@ struct KanbanTaskCard: View {
                 HStack {
                     Image(systemName: "calendar")
                         .font(.caption2)
-                    Text(CalendarHelper.shared.formatDate(dueDate, calendarType: task.calendarType, language: localizationManager.currentLanguage))
+                    Text(CalendarHelper.shared.formatDate(dueDate, calendarType: currentCalendarType, language: localizationManager.currentLanguage))
                         .font(.caption2)
                     Spacer()
                 }
@@ -234,12 +236,11 @@ struct KanbanTaskCard: View {
             return .green
         }
         
-        let calendar = Calendar.current
-        if calendar.isDateInToday(dueDate) {
+        if CalendarHelper.shared.isToday(dueDate, calendarType: currentCalendarType) {
             return .orange
-        } else if calendar.isDateInTomorrow(dueDate) {
+        } else if CalendarHelper.shared.isTomorrow(dueDate, calendarType: currentCalendarType) {
             return .blue
-        } else if dueDate < Date() {
+        } else if CalendarHelper.shared.isOverdue(dueDate, calendarType: currentCalendarType) {
             return .red
         } else {
             return .secondary
@@ -248,6 +249,10 @@ struct KanbanTaskCard: View {
     
     private var completedSubtasksCount: Int {
         task.subtasks.filter { $0.isCompleted }.count
+    }
+    
+    private var currentCalendarType: CalendarType {
+        return appSettings.first?.calendarType ?? .gregorian
     }
 }
 

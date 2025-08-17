@@ -1,10 +1,14 @@
 import SwiftUI
+import SwiftData
 
 struct TaskRowView: View {
     let task: Task
     @EnvironmentObject var localizationManager: LocalizationManager
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.modelContext) private var modelContext
+    @Query private var appSettings: [AppSettings]
+    @State private var showingTaskDetail = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -39,7 +43,7 @@ struct TaskRowView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "calendar")
                             .font(.caption)
-                        Text(CalendarHelper.shared.formatDate(dueDate, calendarType: task.calendarType, language: localizationManager.currentLanguage))
+                        Text(CalendarHelper.shared.formatDate(dueDate, calendarType: currentCalendarType, language: localizationManager.currentLanguage))
                             .font(.caption)
                     }
                     .foregroundColor(dueDateColor)
@@ -56,8 +60,8 @@ struct TaskRowView: View {
                                     .font(.caption2)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
-                                    .background(themeManager.accentColorValue.opacity(0.2))
-                                    .foregroundColor(themeManager.accentColorValue)
+                                                                .background(themeManager.appColorValue.opacity(0.2))
+                            .foregroundColor(themeManager.appColorValue)
                                     .cornerRadius(8)
                             }
                         }
@@ -81,6 +85,12 @@ struct TaskRowView: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .onTapGesture {
+            showingTaskDetail = true
+        }
+        .sheet(isPresented: $showingTaskDetail) {
+            TaskDetailView(task: task)
+        }
     }
     
     private var priorityColor: Color {
@@ -131,12 +141,11 @@ struct TaskRowView: View {
             return .green
         }
         
-        let calendar = Calendar.current
-        if calendar.isDateInToday(dueDate) {
+        if CalendarHelper.shared.isToday(dueDate, calendarType: currentCalendarType) {
             return .orange
-        } else if calendar.isDateInTomorrow(dueDate) {
+        } else if CalendarHelper.shared.isTomorrow(dueDate, calendarType: currentCalendarType) {
             return .blue
-        } else if dueDate < Date() {
+        } else if CalendarHelper.shared.isOverdue(dueDate, calendarType: currentCalendarType) {
             return .red
         } else {
             return .secondary
@@ -146,12 +155,16 @@ struct TaskRowView: View {
     private var completedSubtasksCount: Int {
         task.subtasks.filter { $0.isCompleted }.count
     }
+    
+    private var currentCalendarType: CalendarType {
+        return appSettings.first?.calendarType ?? .gregorian
+    }
 }
 
 #Preview {
     TaskRowView(task: Task(title: "Sample Task", taskDescription: "This is a sample task description", priority: .high, status: .inProgress, dueDate: Date().addingTimeInterval(86400), tags: ["work", "important"]))
         .environmentObject(LocalizationManager.shared)
         .environmentObject(ThemeManager.shared)
-        .modelContainer(for: Task.self, inMemory: true)
+        .modelContainer(for: [Task.self, AppSettings.self], inMemory: true)
         .padding()
 }

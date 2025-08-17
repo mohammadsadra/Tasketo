@@ -110,10 +110,10 @@
 			fileSystemSynchronizedGroups = (
 				F82B98EC2E4C81A00057C7C5 /* tasketo */,
 			);
-			name = tasketo;
+			name = Tasketo;
 			packageProductDependencies = (
 			);
-			productName = tasketo;
+			productName = Tasketo;
 			productReference = F82B98EA2E4C81A00057C7C5 /* tasketo.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -497,7 +497,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = tasketo;
+				TEST_TARGET_NAME = Tasketo;
 			};
 			name = Debug;
 		};
@@ -514,7 +514,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = tasketo;
+				TEST_TARGET_NAME = Tasketo;
 			};
 			name = Release;
 		};

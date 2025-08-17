@@ -7,6 +7,7 @@ struct TaskDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var localizationManager: LocalizationManager
     @EnvironmentObject var themeManager: ThemeManager
+    @Query private var appSettings: [AppSettings]
     
     @State private var showingEditTask = false
     @State private var showingDeleteAlert = false
@@ -83,7 +84,7 @@ struct TaskDetailView: View {
                     
                     // Due Date Section
                     if let dueDate = task.dueDate {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: localizationManager.currentLanguage.isRTL ? .trailing : .leading, spacing: 8) {
                             Text(localizationManager.localizedString(.dueDate))
                                 .font(.headline)
                                 .fontWeight(.semibold)
@@ -91,7 +92,7 @@ struct TaskDetailView: View {
                             HStack {
                                 Image(systemName: "calendar")
                                     .foregroundColor(dueDateColor)
-                                Text(CalendarHelper.shared.formatDate(dueDate, calendarType: task.calendarType, language: localizationManager.currentLanguage))
+                                Text(CalendarHelper.shared.formatDate(dueDate, calendarType: currentCalendarType, language: localizationManager.currentLanguage))
                                     .foregroundColor(dueDateColor)
                                 Spacer()
                             }
@@ -103,10 +104,14 @@ struct TaskDetailView: View {
                     
                     // Tags Section
                     if !task.tags.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(localizationManager.localizedString(.tags))
-                                .font(.headline)
-                                .fontWeight(.semibold)
+                        VStack(alignment: localizationManager.currentLanguage.isRTL ? .trailing : .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "tag")
+                                    .foregroundColor(themeManager.appColorValue)
+                                Text(localizationManager.localizedString(.tags))
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                            }
                             
                             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 8) {
                                 ForEach(task.tags, id: \.self) { tag in
@@ -114,8 +119,8 @@ struct TaskDetailView: View {
                                         .font(.caption)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
-                                        .background(themeManager.accentColorValue.opacity(0.2))
-                                        .foregroundColor(themeManager.accentColorValue)
+                                        .background(themeManager.appColorValue.opacity(0.2))
+                                        .foregroundColor(themeManager.appColorValue)
                                         .cornerRadius(8)
                                 }
                             }
@@ -127,7 +132,7 @@ struct TaskDetailView: View {
                     
                     // Subtasks Section
                     if !task.subtasks.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: localizationManager.currentLanguage.isRTL ? .trailing : .leading, spacing: 8) {
                             HStack {
                                 Text(localizationManager.localizedString(.subtasks))
                                     .font(.headline)
@@ -139,8 +144,8 @@ struct TaskDetailView: View {
                                     .font(.caption)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
-                                    .background(themeManager.primaryColorValue.opacity(0.2))
-                                    .foregroundColor(themeManager.primaryColorValue)
+                                                                .background(themeManager.appColorValue.opacity(0.2))
+                            .foregroundColor(themeManager.appColorValue)
                                     .clipShape(Capsule())
                             }
                             
@@ -186,8 +191,8 @@ struct TaskDetailView: View {
                     }
                     
                     // Created Date
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Created: \(CalendarHelper.shared.formatDate(task.createdDate, calendarType: task.calendarType, language: localizationManager.currentLanguage))")
+                    VStack(alignment: localizationManager.currentLanguage.isRTL ? .trailing : .leading, spacing: 4) {
+                        Text("Created: \(CalendarHelper.shared.formatDate(task.createdDate, calendarType: currentCalendarType, language: localizationManager.currentLanguage))")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -202,17 +207,19 @@ struct TaskDetailView: View {
                     Button(localizationManager.localizedString(.close)) {
                         dismiss()
                     }
+                    .foregroundColor(themeManager.appColorValue)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {
                         Button(action: { showingEditTask = true }) {
                             Image(systemName: "pencil")
+                                .foregroundColor(themeManager.appColorValue)
                         }
                         
                         Button(action: { showingDeleteAlert = true }) {
                             Image(systemName: "trash")
-                                .foregroundColor(.red)
+                                .foregroundColor(themeManager.appColorValue)
                         }
                     }
                 }
@@ -232,12 +239,7 @@ struct TaskDetailView: View {
     }
     
     private var priorityColor: Color {
-        switch task.priority {
-        case .low: return .green
-        case .medium: return .blue
-        case .high: return .orange
-        case .urgent: return .red
-        }
+        return themeManager.appColorValue
     }
     
     private var priorityText: String {
@@ -250,12 +252,7 @@ struct TaskDetailView: View {
     }
     
     private var statusColor: Color {
-        switch task.status {
-        case .pending: return .orange
-        case .inProgress: return .blue
-        case .completed: return .green
-        case .cancelled: return .red
-        }
+        return themeManager.appColorValue
     }
     
     private var statusText: String {
@@ -274,12 +271,11 @@ struct TaskDetailView: View {
             return .green
         }
         
-        let calendar = Calendar.current
-        if calendar.isDateInToday(dueDate) {
+        if CalendarHelper.shared.isToday(dueDate, calendarType: currentCalendarType) {
             return .orange
-        } else if calendar.isDateInTomorrow(dueDate) {
+        } else if CalendarHelper.shared.isTomorrow(dueDate, calendarType: currentCalendarType) {
             return .blue
-        } else if dueDate < Date() {
+        } else if CalendarHelper.shared.isOverdue(dueDate, calendarType: currentCalendarType) {
             return .red
         } else {
             return .secondary
@@ -288,6 +284,10 @@ struct TaskDetailView: View {
     
     private var completedSubtasksCount: Int {
         task.subtasks.filter { $0.isCompleted }.count
+    }
+    
+    private var currentCalendarType: CalendarType {
+        return appSettings.first?.calendarType ?? .gregorian
     }
     
     private func toggleSubtask(_ subtask: Subtask) {
@@ -312,6 +312,8 @@ struct EditTaskView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var localizationManager: LocalizationManager
     @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.modelContext) private var modelContext
+    @Query private var appSettings: [AppSettings]
     
     @State private var title: String
     @State private var taskDescription: String
@@ -328,7 +330,8 @@ struct EditTaskView: View {
         _taskDescription = State(initialValue: task.taskDescription)
         _priority = State(initialValue: task.priority)
         _status = State(initialValue: task.status)
-        _dueDate = State(initialValue: task.dueDate)
+        // Convert UTC date to local time for editing
+        _dueDate = State(initialValue: task.dueDate != nil ? CalendarHelper.shared.fromUTC(task.dueDate!) : nil)
         _tags = State(initialValue: task.tags)
         _notes = State(initialValue: task.notes)
     }
@@ -338,7 +341,7 @@ struct EditTaskView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     // Basic Info Section
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: localizationManager.currentLanguage.isRTL ? .trailing : .leading, spacing: 12) {
                         Text(localizationManager.localizedString(.basicInfo))
                             .font(.headline)
                             .fontWeight(.semibold)
@@ -355,7 +358,7 @@ struct EditTaskView: View {
                     .cornerRadius(12)
                     
                     // Priority Section
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: localizationManager.currentLanguage.isRTL ? .trailing : .leading, spacing: 12) {
                         Text(localizationManager.localizedString(.priority))
                             .font(.headline)
                             .fontWeight(.semibold)
@@ -372,7 +375,7 @@ struct EditTaskView: View {
                     .cornerRadius(12)
                     
                     // Status Section
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: localizationManager.currentLanguage.isRTL ? .trailing : .leading, spacing: 12) {
                         Text(localizationManager.localizedString(.status))
                             .font(.headline)
                             .fontWeight(.semibold)
@@ -389,26 +392,34 @@ struct EditTaskView: View {
                     .cornerRadius(12)
                     
                     // Due Date Section
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: localizationManager.currentLanguage.isRTL ? .trailing : .leading, spacing: 12) {
                         Text(localizationManager.localizedString(.dueDate))
                             .font(.headline)
                             .fontWeight(.semibold)
                         
-                        DatePicker(localizationManager.localizedString(.dueDate), selection: Binding(
-                            get: { dueDate ?? Date() },
-                            set: { dueDate = $0 }
-                        ), displayedComponents: [.date, .hourAndMinute])
-                        .datePickerStyle(CompactDatePickerStyle())
+                        CustomDatePicker(
+                            title: "",
+                            selection: Binding(
+                                get: { dueDate ?? Date() },
+                                set: { dueDate = $0 }
+                            ),
+                            calendarType: currentCalendarType,
+                            language: localizationManager.currentLanguage
+                        )
                     }
                     .padding()
                     .background(Color(.systemGray6))
                     .cornerRadius(12)
                     
                     // Tags Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(localizationManager.localizedString(.tags))
-                            .font(.headline)
-                            .fontWeight(.semibold)
+                    VStack(alignment: localizationManager.currentLanguage.isRTL ? .trailing : .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "tag")
+                                .foregroundColor(themeManager.appColorValue)
+                            Text(localizationManager.localizedString(.tags))
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                        }
                         
                         ForEach(tags, id: \.self) { tag in
                             HStack {
@@ -436,7 +447,7 @@ struct EditTaskView: View {
                     .cornerRadius(12)
                     
                     // Notes Section
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: localizationManager.currentLanguage.isRTL ? .trailing : .leading, spacing: 12) {
                         Text(localizationManager.localizedString(.notes))
                             .font(.headline)
                             .fontWeight(.semibold)
@@ -458,12 +469,14 @@ struct EditTaskView: View {
                     Button(localizationManager.localizedString(.cancel)) {
                         dismiss()
                     }
+                    .foregroundColor(themeManager.appColorValue)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(localizationManager.localizedString(.save)) {
                         saveTask()
                     }
+                    .foregroundColor(themeManager.appColorValue)
                 }
             }
         }
@@ -487,6 +500,10 @@ struct EditTaskView: View {
         }
     }
     
+    private var currentCalendarType: CalendarType {
+        return appSettings.first?.calendarType ?? .gregorian
+    }
+    
     private func addTag() {
         let trimmedTag = newTag.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedTag.isEmpty && !tags.contains(trimmedTag) {
@@ -504,7 +521,8 @@ struct EditTaskView: View {
         task.taskDescription = taskDescription
         task.priority = priority
         task.status = status
-        task.dueDate = dueDate
+        // Store due date in UTC
+        task.dueDate = dueDate != nil ? CalendarHelper.shared.toUTC(dueDate!) : nil
         task.tags = tags
         task.notes = notes
         
@@ -516,5 +534,5 @@ struct EditTaskView: View {
     TaskDetailView(task: Task(title: "Sample Task", taskDescription: "This is a sample task description", priority: .high, status: .inProgress))
         .environmentObject(LocalizationManager.shared)
         .environmentObject(ThemeManager.shared)
-        .modelContainer(for: Task.self, inMemory: true)
+        .modelContainer(for: [Task.self, AppSettings.self], inMemory: true)
 }

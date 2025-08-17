@@ -19,6 +19,8 @@ class LocalizationManager: ObservableObject {
     
     func setLanguage(_ language: AppLanguage) {
         currentLanguage = language
+        // Trigger UI update by sending objectWillChange notification
+        objectWillChange.send()
     }
 }
 

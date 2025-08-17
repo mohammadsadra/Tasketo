@@ -2,7 +2,6 @@ import SwiftUI
 import SwiftData
 
 struct SettingsView: View {
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var localizationManager: LocalizationManager
     @EnvironmentObject var themeManager: ThemeManager
@@ -11,14 +10,13 @@ struct SettingsView: View {
     @State private var selectedLanguage: AppLanguage = .english
     @State private var selectedTheme: AppTheme = .system
     @State private var selectedCalendar: CalendarType = .gregorian
-    @State private var selectedPrimaryColor: String = "blue"
-    @State private var selectedAccentColor: String = "orange"
+    @State private var selectedAppColor: String = "blue"
     
     var body: some View {
         NavigationView {
             Form {
                 // Language Settings
-                Section(header: Text(localizationManager.localizedString(.language))) {
+                Section {
                     Picker(localizationManager.localizedString(.language), selection: $selectedLanguage) {
                         ForEach(AppLanguage.allCases, id: \.self) { language in
                             Text(language.displayName)
@@ -30,10 +28,12 @@ struct SettingsView: View {
                         localizationManager.setLanguage(newValue)
                         saveSettings()
                     }
+                } header: {
+                    Text(localizationManager.localizedString(.language))
                 }
                 
                 // Theme Settings
-                Section(header: Text(localizationManager.localizedString(.theme))) {
+                Section {
                     Picker(localizationManager.localizedString(.theme), selection: $selectedTheme) {
                         ForEach(AppTheme.allCases, id: \.self) { theme in
                             HStack {
@@ -48,10 +48,12 @@ struct SettingsView: View {
                         themeManager.setTheme(newValue)
                         saveSettings()
                     }
+                } header: {
+                    Text(localizationManager.localizedString(.theme))
                 }
                 
                 // Calendar Settings
-                Section(header: Text(localizationManager.localizedString(.calendar))) {
+                Section {
                     Picker(localizationManager.localizedString(.calendar), selection: $selectedCalendar) {
                         ForEach(CalendarType.allCases, id: \.self) { calendar in
                             Text(calendarText(for: calendar))
@@ -61,58 +63,43 @@ struct SettingsView: View {
                     .pickerStyle(SegmentedPickerStyle())
                     .onChange(of: selectedCalendar) { _, newValue in
                         saveSettings()
+                        // Trigger UI refresh by updating the environment
+                        themeManager.objectWillChange.send()
                     }
+                } header: {
+                    Text(localizationManager.localizedString(.calendar))
                 }
                 
                 // Color Settings
-                Section(header: Text(localizationManager.localizedString(.colors))) {
-                    // Primary Color
-                    VStack(alignment: .leading, spacing: 8) {
+                Section {
+                    VStack(alignment: localizationManager.currentLanguage.isRTL ? .trailing : .leading, spacing: 6) {
                         Text(localizationManager.localizedString(.primaryColor))
-                            .font(.headline)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                         
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 12) {
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 8) {
                             ForEach(ThemeManager.availableColors, id: \.self) { color in
                                 Button(action: {
-                                    selectedPrimaryColor = color
-                                    themeManager.setPrimaryColor(color)
+                                    print("App color button tapped: \(color)")
+                                    selectedAppColor = color
+                                    themeManager.setAppColor(color)
                                     saveSettings()
                                 }) {
                                     Circle()
                                         .fill(colorValue(for: color))
-                                        .frame(width: 40, height: 40)
+                                        .frame(width: 45, height: 45)
                                         .overlay(
                                             Circle()
-                                                .stroke(selectedPrimaryColor == color ? Color.primary : Color.clear, lineWidth: 3)
+                                                .stroke(selectedAppColor == color ? Color.primary : Color.clear, lineWidth: 3)
                                         )
                                 }
+                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                     }
-                    
-                    // Accent Color
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(localizationManager.localizedString(.accentColor))
-                            .font(.headline)
-                        
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 12) {
-                            ForEach(ThemeManager.availableColors, id: \.self) { color in
-                                Button(action: {
-                                    selectedAccentColor = color
-                                    themeManager.setAccentColor(color)
-                                    saveSettings()
-                                }) {
-                                    Circle()
-                                        .fill(colorValue(for: color))
-                                        .frame(width: 40, height: 40)
-                                        .overlay(
-                                            Circle()
-                                                .stroke(selectedAccentColor == color ? Color.primary : Color.clear, lineWidth: 3)
-                                        )
-                                }
-                            }
-                        }
-                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    Text(localizationManager.localizedString(.colors))
                 }
                 
                 // App Information
@@ -155,17 +142,13 @@ struct SettingsView: View {
             }
             .navigationTitle(localizationManager.localizedString(.settings))
             .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(localizationManager.localizedString(.done)) {
-                        dismiss()
-                    }
-                }
-            }
         }
         .environment(\.layoutDirection, localizationManager.currentLanguage.isRTL ? .rightToLeft : .leftToRight)
         .onAppear {
             loadSettings()
+        }
+        .onChange(of: localizationManager.currentLanguage) { _, _ in
+            // Force view refresh when language changes
         }
     }
     
@@ -217,14 +200,12 @@ struct SettingsView: View {
             selectedLanguage = settings.language
             selectedTheme = settings.theme
             selectedCalendar = settings.calendarType
-            selectedPrimaryColor = settings.primaryColor
-            selectedAccentColor = settings.accentColor
+            selectedAppColor = settings.primaryColor // Use primaryColor as appColor
             
             // Apply settings to managers
             localizationManager.setLanguage(settings.language)
             themeManager.setTheme(settings.theme)
-            themeManager.setPrimaryColor(settings.primaryColor)
-            themeManager.setAccentColor(settings.accentColor)
+            themeManager.setAppColor(settings.primaryColor)
         } else {
             // Create default settings
             let settings = AppSettings()
@@ -235,14 +216,27 @@ struct SettingsView: View {
     
     private func saveSettings() {
         if let settings = appSettings.first {
+            let previousCalendarType = settings.calendarType
             settings.language = selectedLanguage
             settings.theme = selectedTheme
             settings.calendarType = selectedCalendar
-            settings.primaryColor = selectedPrimaryColor
-            settings.accentColor = selectedAccentColor
+            settings.primaryColor = selectedAppColor // Save appColor as primaryColor
+            settings.accentColor = selectedAppColor // Also save as accentColor for compatibility
+            
+            // If calendar type changed, update all tasks to use the new calendar type
+            if previousCalendarType != selectedCalendar {
+                updateTasksCalendarType(to: selectedCalendar)
+            }
             
             try? modelContext.save()
         }
+    }
+    
+    private func updateTasksCalendarType(to newCalendarType: CalendarType) {
+        // This function would update all existing tasks to use the new calendar type
+        // For now, we'll just update the calendar type for display purposes
+        // The actual date conversion would be more complex and depends on the specific requirements
+        print("Calendar type changed to: \(newCalendarType)")
     }
 }
 

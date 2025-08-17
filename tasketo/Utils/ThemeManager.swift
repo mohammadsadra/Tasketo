@@ -4,8 +4,7 @@ class ThemeManager: ObservableObject {
     static let shared = ThemeManager()
     
     @Published var currentTheme: AppTheme = .system
-    @Published var primaryColor: String = "blue"
-    @Published var accentColor: String = "orange"
+    @Published var appColor: String = "blue"
     
     private init() {}
     
@@ -20,8 +19,8 @@ class ThemeManager: ObservableObject {
         }
     }
     
-    var primaryColorValue: Color {
-        switch primaryColor {
+    var appColorValue: Color {
+        switch appColor {
         case "blue": return .blue
         case "green": return .green
         case "orange": return .orange
@@ -37,33 +36,14 @@ class ThemeManager: ObservableObject {
         }
     }
     
-    var accentColorValue: Color {
-        switch accentColor {
-        case "blue": return .blue
-        case "green": return .green
-        case "orange": return .orange
-        case "red": return .red
-        case "purple": return .purple
-        case "pink": return .pink
-        case "yellow": return .yellow
-        case "mint": return .mint
-        case "teal": return .teal
-        case "cyan": return .cyan
-        case "indigo": return .indigo
-        default: return .orange
-        }
-    }
-    
     func setTheme(_ theme: AppTheme) {
         currentTheme = theme
     }
     
-    func setPrimaryColor(_ color: String) {
-        primaryColor = color
-    }
-    
-    func setAccentColor(_ color: String) {
-        accentColor = color
+    func setAppColor(_ color: String) {
+        appColor = color
+        print("App color changed to: \(color)")
+        objectWillChange.send()
     }
     
     static let availableColors = [

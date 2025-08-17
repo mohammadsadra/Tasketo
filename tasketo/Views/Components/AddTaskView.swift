@@ -6,6 +6,7 @@ struct AddTaskView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var localizationManager: LocalizationManager
     @EnvironmentObject var themeManager: ThemeManager
+    @Query private var appSettings: [AppSettings]
     
     @State private var title = ""
     @State private var taskDescription = ""
@@ -16,7 +17,6 @@ struct AddTaskView: View {
     @State private var tags: [String] = []
     @State private var newTag = ""
     @State private var notes = ""
-    @State private var calendarType: CalendarType = .gregorian
     @State private var isRecurring = false
     @State private var recurrencePattern: RecurrencePattern = .daily
     
@@ -39,7 +39,7 @@ struct AddTaskView: View {
                         ForEach(TaskPriority.allCases, id: \.self) { priority in
                             HStack {
                                 Circle()
-                                    .fill(priorityColor(for: priority))
+                                    .fill(themeManager.appColorValue)
                                     .frame(width: 12, height: 12)
                                 Text(priorityText(for: priority))
                             }
@@ -64,20 +64,12 @@ struct AddTaskView: View {
                     Toggle(localizationManager.localizedString(.dueDate), isOn: $hasDueDate)
                     
                     if hasDueDate {
-                        DatePicker(
-                            localizationManager.localizedString(.dueDate),
+                        CustomDatePicker(
+                            title: localizationManager.localizedString(.dueDate),
                             selection: $dueDate,
-                            displayedComponents: [.date, .hourAndMinute]
+                            calendarType: currentCalendarType,
+                            language: localizationManager.currentLanguage
                         )
-                        .datePickerStyle(CompactDatePickerStyle())
-                        
-                        Picker(localizationManager.localizedString(.calendar), selection: $calendarType) {
-                            ForEach(CalendarType.allCases, id: \.self) { calendar in
-                                Text(calendarText(for: calendar))
-                                    .tag(calendar)
-                            }
-                        }
-                        .pickerStyle(SegmentedPickerStyle())
                     }
                 }
                 
@@ -104,7 +96,7 @@ struct AddTaskView: View {
                         
                         Button(action: addTag) {
                             Image(systemName: "plus.circle.fill")
-                                .foregroundColor(themeManager.primaryColorValue)
+                                .foregroundColor(themeManager.appColorValue)
                         }
                         .disabled(newTag.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
@@ -118,13 +110,13 @@ struct AddTaskView: View {
                                     Button(action: { removeTag(tag) }) {
                                         Image(systemName: "xmark.circle.fill")
                                             .font(.caption)
-                                            .foregroundColor(.red)
+                                            .foregroundColor(themeManager.appColorValue)
                                     }
                                 }
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(themeManager.accentColorValue.opacity(0.2))
-                                .foregroundColor(themeManager.accentColorValue)
+                                                            .background(themeManager.appColorValue.opacity(0.2))
+                            .foregroundColor(themeManager.appColorValue)
                                 .cornerRadius(8)
                             }
                         }
@@ -145,12 +137,14 @@ struct AddTaskView: View {
                     Button(localizationManager.localizedString(.cancel)) {
                         dismiss()
                     }
+                    .foregroundColor(themeManager.appColorValue)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(localizationManager.localizedString(.save)) {
                         saveTask()
                     }
+                    .foregroundColor(themeManager.appColorValue)
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
@@ -194,6 +188,10 @@ struct AddTaskView: View {
         }
     }
     
+    private var currentCalendarType: CalendarType {
+        return appSettings.first?.calendarType ?? .gregorian
+    }
+    
     private func recurrenceText(for pattern: RecurrencePattern) -> String {
         switch localizationManager.currentLanguage {
         case .english:
@@ -221,8 +219,8 @@ struct AddTaskView: View {
             taskDescription: taskDescription.trimmingCharacters(in: .whitespacesAndNewlines),
             priority: priority,
             status: status,
-            dueDate: hasDueDate ? dueDate : nil,
-            calendarType: calendarType,
+                                            dueDate: hasDueDate ? CalendarHelper.shared.toUTC(dueDate) : nil,
+                calendarType: currentCalendarType,
             tags: tags,
             isRecurring: isRecurring,
             recurrencePattern: isRecurring ? recurrencePattern : nil,
@@ -244,5 +242,38 @@ struct AddTaskView: View {
     AddTaskView()
         .environmentObject(LocalizationManager.shared)
         .environmentObject(ThemeManager.shared)
-        .modelContainer(for: Task.self, inMemory: true)
+        .modelContainer(for: [Task.self, AppSettings.self], inMemory: true)
+}
+
+struct CustomDatePicker: View {
+    let title: String
+    @Binding var selection: Date
+    let calendarType: CalendarType
+    let language: AppLanguage
+    
+    init(title: String, selection: Binding<Date>, calendarType: CalendarType, language: AppLanguage) {
+        self.title = title
+        self._selection = selection
+        self.calendarType = calendarType
+        self.language = language
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !title.isEmpty {
+                Text(title)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+            }
+            
+            DatePicker(
+                title.isEmpty ? (language == .persian ? "تاریخ" : "Date") : title,
+                selection: $selection,
+                displayedComponents: [.date, .hourAndMinute]
+            )
+            .datePickerStyle(CompactDatePickerStyle())
+            .environment(\.calendar, calendarType == .gregorian ? Calendar(identifier: .gregorian) : Calendar(identifier: .persian))
+            .environment(\.locale, Locale(identifier: language.locale))
+        }
+    }
 }
